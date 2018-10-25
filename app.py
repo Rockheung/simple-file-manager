@@ -28,15 +28,13 @@ class FlaskFileManager(filemanager.FileManager):
     # Overriding original methods
     def upload(self, files, dest):
         try:
-            for _file in list(files):
+            for _file in files.values():
                 path = os.path.join(self.root, dest.replace('/', '', 1))
                 if not path.startswith(self.root):
                      return {'result': {'success': 'false', 'error': 'Invalid path'}}
-
-                # fs = FileSystemStorage(location=path)
-                # fs.save(files.get(_file).name, files.get(_file))
+                _file.save(os.path.join(path, _file.filename))
         except Exception as e:
-            return {'result': {'success': 'false', 'error': e.message}}
+            return {'result': {'success': 'false', 'error': 'true'}}
         return {'result': {'success': 'true', 'error': ''}}
 
     def download(self, path):
@@ -53,24 +51,20 @@ class FlaskFileManager(filemanager.FileManager):
         return response
 
     def downloadMultiple(self, request):
-        items = request.get('items')
+        items = request['items']
         folders = []
         for item in items:
             _path = os.path.join(self.root + os.path.expanduser(item))
-            if not ( (os.path.exists(_path) or os.path.isfile(_path))and _path.startswith(self.root)):
+            if not ( (os.path.exists(_path) or os.path.isfile(_path) ) and _path.startswith(self.root)):
                 continue
             folders.append(_path)
         tmpdir = tempfile.mkdtemp()
         filename = request.get('toFilename')[0].replace('.zip', '',1)
         saved_umask = os.umask(77)
-        path = os.path.join(os.getcwd(), filename)
+        path = os.path.join(tmpdir, filename)
         try:
             filemanager.compress_zip(path, folders)
             response = send_file(path+".zip")
-            #with open(path+".zip", 'rb') as f:
-            #    response = make_response(f.read())
-            #    response.headers['Content-Type'] = "application/octet-stream"
-            #    response.headers['Content-Disposition'] = 'inline; filename=' + os.path.basename(path)+'.zip'
             return [response, saved_umask, tmpdir]
         except IOError as e:
             print("IOError")
@@ -131,7 +125,7 @@ def download():
 
 @app.route("/downloadMultiple")
 def downloadMultiple():
-    ret = fm.downloadMultiple(request.args)
+    ret = fm.downloadMultiple(request.args.to_dict(flat=False))
     os.umask(ret[1])
     shutil.rmtree(ret[2], ignore_errors=True)
     return ret[0]
@@ -154,7 +148,7 @@ def extract():
 
 @app.route("/upload", methods=['POST'])
 def upload():
-    return jsonify(fm.upload(request.files['file'], request.args.get['destination']))
+    return jsonify(fm.upload(request.files.to_dict(), request.form.get('destination')))
 
 if __name__ == "__main__":
     app.run()
