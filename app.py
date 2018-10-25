@@ -4,10 +4,9 @@ import shutil
 import importlib
 import sys
 import importlib
-from flask import Flask, request
+from flask import Flask, request, jsonify, render_template
 
 # from django.shortcuts import render
-# from django.shortcuts import render_to_response
 # from django.http import HttpResponse
 
 
@@ -25,27 +24,8 @@ sys.modules["django.core.files.storage"] = faked_django
 filemanager = importlib.import_module("angular-filemanager.bridges.python.django.filemanager_app.filemanager")
 
 
+app = Flask(__name__, static_url_path='')
 
-urlpatterns = [
-    url(r'^$', fm.index),
-    url(r'^list$', fm.list_),
-    url(r'^rename$', fm.rename),
-    url(r'^move$', fm.move),
-    url(r'^copy$', fm.copy),
-    url(r'^remove$', fm.remove),
-    url(r'^edit$', fm.edit),
-    url(r'^getContent$', fm.getContent),
-    url(r'^createFolder$', fm.createFolder),
-    url(r'^changePermissions$', fm.changePermissions),
-    url(r'^compress$', fm.compress),
-    url(r'^extract$', fm.extract),
-    url(r'^downloadMultiple$', fm.downloadMultiple),
-    url(r'^download$', fm.download),
-    url(r'^upload$', fm.upload),
-]
-
-
-app = Flask(__name__)
 class FlaskFileManager(filemanager.FileManager):
 
     # Overriding original upload method using django's FileSystemStorage
@@ -55,8 +35,9 @@ class FlaskFileManager(filemanager.FileManager):
                 path = os.path.join(self.root, dest.replace('/', '', 1))
                 if not path.startswith(self.root):
                      return {'result': {'success': 'false', 'error': 'Invalid path'}}
-                fs = FileSystemStorage(location=path)
-                fs.save(files.get(_file).name, files.get(_file))
+
+                # fs = FileSystemStorage(location=path)
+                # fs.save(files.get(_file).name, files.get(_file))
         except Exception as e:
             return {'result': {'success': 'false', 'error': e.message}}
         return {'result': {'success': 'true', 'error': ''}}
@@ -64,73 +45,81 @@ class FlaskFileManager(filemanager.FileManager):
 fm = FlaskFileManager(os.environ['HOME'], False)
 
 @app.route("/")
-def hello():
-    return "Hello World!"
+def index():
+    return render_template('index.html')
 
 
+@app.route("/list", methods=['GET', 'POST'])
+def list_():
+    return jsonify(fm.list(request.get_json()))
 
 
-def index(request):
-    return render(request, 'filemanager_app/index.html')
+@app.route("/rename")
+def rename():
+    return jsonify(fm.rename(request.get_json()))
 
 
-def list_(request):
-    return HttpResponse(json.dumps(fm.list(json.loads(request.body.decode('utf-8')))))
+@app.route("/copy")
+def copy():
+    return jsonify(fm.copy(request.get_json()))
 
 
-def rename(request):
-    return HttpResponse(json.dumps(fm.rename(json.loads(request.body.decode('utf-8')))))
+@app.route("/remove")
+def remove():
+    return jsonify(fm.remove(request.get_json()))
 
 
-def copy(request):
-    return HttpResponse(json.dumps(fm.copy(json.loads(request.body.decode('utf-8')))))
+@app.route("/edit")
+def edit():
+    return jsonify(fm.edit(request.get_json()))
 
 
-def remove(request):
-    return HttpResponse(json.dumps(fm.remove(json.loads(request.body.decode('utf-8')))))
+@app.route("/createFolder")
+def createFolder():
+    return jsonify(fm.createFolder(request.get_json()))
 
 
-def edit(request):
-    return HttpResponse(json.dumps(fm.edit(json.loads(request.body.decode('utf-8')))))
+@app.route("/changePermissions")
+def changePermissions():
+    return jsonify(fm.changePermissions(request.get_json()))
 
 
-def createFolder(request):
-    return HttpResponse(json.dumps(fm.createFolder(json.loads(request.body.decode('utf-8')))))
+@app.route("/compress")
+def compress():
+    return jsonify(fm.compress(request.get_json()))
 
 
-def changePermissions(request):
-    return HttpResponse(json.dumps(fm.changePermissions(json.loads(request.body.decode('utf-8')))))
-
-
-def compress(request):
-    return HttpResponse(json.dumps(fm.compress(json.loads(request.body.decode('utf-8')))))
-
-
-def downloadMultiple(request):
+@app.route("/downloadMultiple")
+def downloadMultiple():
     ret = fm.downloadMultiple(request.GET, HttpResponse)
     os.umask(ret[1])
     shutil.rmtree(ret[2], ignore_errors=True)
     return ret[0]
 
 
-def move(request):
-    return HttpResponse(json.dumps(fm.move(json.loads(request.body.decode('utf-8')))))
+@app.route("/move")
+def move():
+    return jsonify(fm.move(request.get_json()))
 
 
-def getContent(request):
-    return HttpResponse(json.dumps(fm.getContent(json.loads(request.body.decode('utf-8')))))
+@app.route("/getContent")
+def getContent():
+    return jsonify(fm.getContent(request.get_json()))
 
 
-def extract(request):
-    return HttpResponse(json.dumps(fm.extract(json.loads(request.body.decode('utf-8')))))
+@app.route("/extract")
+def extract():
+    return jsonify(fm.extract(request.get_json()))
 
 
-def download(request):
+@app.route("/download")
+def download():
     return fm.download(request.GET['path'], HttpResponse)
 
 
-def upload(request):
-    return HttpResponse(json.dumps(fm.upload(request.FILES, request.POST['destination'])))
+@app.route("/upload", methods=['POST'])
+def upload():
+    return jsonify(fm.upload(request.files['file'], request.POST['destination']))
 
 if __name__ == "__main__":
     app.run()
