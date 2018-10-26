@@ -43,68 +43,42 @@
   <!-- /Comment if you need to use raw source code -->
 
   <script type="text/javascript">
-     //example to override angular-filemanager default config
-      var module = angular.module('FileManagerApp');
-      module.run( function run( $http ){
-
+    //example to override angular-filemanager default config
+    var module = angular.module('FileManagerApp');
+    module.run( function run( $http ){
     // For CSRF token compatibility with Django
     //$http.defaults.headers.post['X-CSRFToken'] = "{{ csrf_token }}";
-})
-
-
-
-          module.config(['fileManagerConfigProvider', function (config) {
-        var defaults = config.$get();
-        config.set({
-                  appName: 'angular-filemanager-custom-urls',
-                  listUrl: 'list',
-                  uploadUrl: 'upload',
-                  renameUrl: 'rename',
-                  copyUrl: 'copy',
-                  moveUrl: 'move',
-                  removeUrl: 'remove',
-                  editUrl: 'edit',
-                  getContentUrl: 'getContent',
-                  createFolderUrl: 'createFolder',
-                  downloadFileUrl: 'download',
-                  downloadMultipleUrl: 'downloadMultiple',
-                  compressUrl: 'compress',
-                  extractUrl: 'extract',
-                  permissionsUrl: 'changePermissions',
-                  searchForm: true,
-                  sidebar: true,
-                  breadcrumb: true,
-                  allowedActions: {
-                      upload: true,
-                      rename: true,
-                      move: true,
-                      copy: true,
-                      edit: true,
-                      changePermissions: true,
-                      compress: true,
-                      compressChooseName: true,
-                      extract: true,
-                      download: true,
-                      downloadMultiple: true,
-                      preview: true,
-                      remove: true,
-                      createFolder: true,
-                      pickFiles: false,
-                      pickFolders: false
-                  },
-
-        });
-      }])
+    })
+    module.config(['fileManagerConfigProvider', function (config) {
+      var defaults = config.$get();
+      config.set({
+        appName: 'simple-file-manager-with-flask',
+        listUrl: 'api',
+        uploadUrl: 'api',
+        renameUrl: 'api',
+        copyUrl: 'api',
+        moveUrl: 'api',
+        removeUrl: 'api',
+        editUrl: 'api',
+        getContentUrl: 'api',
+        createFolderUrl: 'api',
+        downloadFileUrl: 'api',
+        downloadMultipleUrl: 'api',
+        compressUrl: 'api',
+        extractUrl: 'api',
+        permissionsUrl: 'api',
+        basePath: '/',
+        searchForm: true,
+        sidebar: true,
+        breadcrumb: true,
+      });
+    }])
 
 
   </script>
 </head>
 
 <body class="ng-cloak">
-
-
   <angular-filemanager> </angular-filemanager>
-
-
 </body>
 </html>

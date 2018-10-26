@@ -26,19 +26,9 @@ app = Flask(__name__, static_url_path='')
 class FlaskFileManager(filemanager.FileManager):
 
     # Overriding original methods
-    def upload(self, files, dest):
-        try:
-            for _file in files.values():
-                path = os.path.join(self.root, dest.replace('/', '', 1))
-                if not path.startswith(self.root):
-                     return {'result': {'success': 'false', 'error': 'Invalid path'}}
-                _file.save(os.path.join(path, _file.filename))
-        except Exception as e:
-            return {'result': {'success': 'false', 'error': 'true'}}
-        return {'result': {'success': 'true', 'error': ''}}
-
-    def download(self, path):
-        path = os.path.abspath(self.root + path)
+    def download(self, request):
+        path = os.path.abspath(self.root + request['path'])
+        response = {}
         if path.startswith(self.root) and os.path.isfile(path):
             try:
                 with open(path, 'rb') as f:
@@ -59,96 +49,65 @@ class FlaskFileManager(filemanager.FileManager):
                 continue
             folders.append(_path)
         tmpdir = tempfile.mkdtemp()
-        filename = request.get('toFilename')[0].replace('.zip', '',1)
+        filename = request.get('toFilename').replace('.zip', '',1)
         saved_umask = os.umask(77)
         path = os.path.join(tmpdir, filename)
         try:
             filemanager.compress_zip(path, folders)
             response = send_file(path+".zip")
-            return [response, saved_umask, tmpdir]
+
+            os.umask(saved_umask)
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
+            return response
+
         except IOError as e:
             print("IOError")
         else:
             shutil.rmtree(tmpdir, ignore_errors=True)
 
+    def upload(self, request):
+        files = request['files']
+        dest = request['destination']
+        try:
+            for _file in files.values():
+                path = os.path.join(self.root, dest.replace('/', '', 1))
+                if not path.startswith(self.root):
+                     return {'result': {'success': 'false', 'error': 'Invalid path'}}
+                _file.save(os.path.join(path, _file.filename))
+        except Exception as e:
+            return {'result': {'success': 'false', 'error': 'true'}}
+        return {'result': {'success': 'true', 'error': ''}}
+
 fm = FlaskFileManager(os.environ['HOME'], False)
+
 
 @app.route("/")
 def index():
     return render_template('index.html')
 
 
-@app.route("/list", methods=['POST'])
-def list_():
-    return jsonify(fm.list(request.get_json()))
+@app.route("/api", methods=['GET', 'POST'])
+def api():
 
+    if request.method == 'POST':
+        destination = request.form.get('destination')
+        if destination == None:
+            cmd = request.get_json()
+        else :
+            cmd = { 'action': 'upload',
+                    'files': requset.files.to_dict(),
+                    'dest': destination }
 
-@app.route("/rename", methods=['POST'])
-def rename():
-    return jsonify(fm.rename(request.get_json()))
+    else :
+        cmd = request.args.to_dict(flat=False)
+        cmd = { k: v if len(v) > 1 else v[0] for k, v in cmd.items() }
 
+    fm_method = getattr(fm, cmd['action'])
+    response = fm_method(cmd)
 
-@app.route("/copy", methods=['POST'])
-def copy():
-    return jsonify(fm.copy(request.get_json()))
+    return jsonify(response) if type(response) is dict else response
 
-
-@app.route("/remove", methods=['POST'])
-def remove():
-    return jsonify(fm.remove(request.get_json()))
-
-
-@app.route("/edit", methods=['POST'])
-def edit():
-    return jsonify(fm.edit(request.get_json()))
-
-
-@app.route("/createFolder", methods=['POST'])
-def createFolder():
-    return jsonify(fm.createFolder(request.get_json()))
-
-
-@app.route("/changePermissions", methods=['POST'])
-def changePermissions():
-    return jsonify(fm.changePermissions(request.get_json()))
-
-
-@app.route("/compress", methods=['POST'])
-def compress():
-    return jsonify(fm.compress(request.get_json()))
-
-
-@app.route("/download")
-def download():
-    return fm.download(request.args.get('path'))
-
-
-@app.route("/downloadMultiple")
-def downloadMultiple():
-    ret = fm.downloadMultiple(request.args.to_dict(flat=False))
-    os.umask(ret[1])
-    shutil.rmtree(ret[2], ignore_errors=True)
-    return ret[0]
-
-
-@app.route("/move", methods=['POST'])
-def move():
-    return jsonify(fm.move(request.get_json()))
-
-
-@app.route("/getContent", methods=['POST'])
-def getContent():
-    return jsonify(fm.getContent(request.get_json()))
-
-
-@app.route("/extract", methods=['POST'])
-def extract():
-    return jsonify(fm.extract(request.get_json()))
-
-
-@app.route("/upload", methods=['POST'])
-def upload():
-    return jsonify(fm.upload(request.files.to_dict(), request.form.get('destination')))
 
 if __name__ == "__main__":
     app.run()
