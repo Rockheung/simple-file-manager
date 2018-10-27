@@ -67,8 +67,8 @@ class FlaskFileManager(filemanager.FileManager):
             shutil.rmtree(tmpdir, ignore_errors=True)
 
     def upload(self, request):
-        files = request['files']
-        dest = request['destination']
+        files = request.files.to_dict()
+        dest = request.form.get('destination')
         try:
             for _file in files.values():
                 path = os.path.join(self.root, dest.replace('/', '', 1))
@@ -91,19 +91,19 @@ def index():
 def api():
 
     if request.method == 'POST':
-        destination = request.form.get('destination')
-        if destination == None:
-            cmd = request.get_json()
-        else :
-            cmd = { 'action': 'upload',
-                    'files': requset.files.to_dict(),
-                    'dest': destination }
+        request.on_json_loading_failed = lambda e: request
+        cmd = request.get_json(force=True)
 
     else :
         cmd = request.args.to_dict(flat=False)
         cmd = { k: v if len(v) > 1 else v[0] for k, v in cmd.items() }
 
-    fm_method = getattr(fm, cmd['action'])
+    try:
+        fm_method = getattr(fm, cmd['action'])
+
+    except TypeError :
+        fm_method = getattr(fm, 'upload')
+
     response = fm_method(cmd)
 
     return jsonify(response) if type(response) is dict else response
