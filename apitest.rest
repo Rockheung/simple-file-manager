@@ -1,0 +1,22 @@
+Content-Type: application/json; charset=utf-8
+Authorization: XXXX XXXX-XXXX
+
+http://localhost:5000
+GET /
+
+http://localhost:5000
+POST /api
+{
+    "action": "list",
+    "path": "/"
+}
+
+http://localhost:5000
+GET /api?action=download&path=%2FDownloads%2FgTe54AdRc+(2).png
+
+http://localhost:5000
+GET /api
+{
+    "action": "downlaod",
+    "path": "/Downloads/gTe54AdRc (2).png"
+}

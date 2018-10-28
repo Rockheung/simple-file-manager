@@ -4,6 +4,7 @@ import tempfile
 import shutil
 import sys
 import importlib
+from uuid import uuid4
 from flask import Flask, request, jsonify, render_template, make_response, send_file
 
 
@@ -19,9 +20,6 @@ sys.modules["django.core.files.storage"] = faked_django
 
 # Using importlib library, we don't have to rename original name including hyphen
 filemanager = importlib.import_module("angular-filemanager.bridges.python.django.filemanager_app.filemanager")
-
-
-app = Flask(__name__, static_url_path='')
 
 class FlaskFileManager(filemanager.FileManager):
 
@@ -80,17 +78,29 @@ class FlaskFileManager(filemanager.FileManager):
         return {'result': {'success': 'true', 'error': ''}}
 
 fm = FlaskFileManager(os.environ['HOME'], False)
+app = Flask(__name__, static_url_path='')
+uniq_key = str(uuid4())
+print('Go: http://localhost:5000/?key={}'.format(uniq_key))
 
+
+@app.errorhandler(404)
+def page_not_found(e):
+    return render_template('404.html'), 404
 
 @app.route("/")
 def index():
-    return render_template('index.html')
+    incomming_uuid = request.args.to_dict().get('key')
+    return render_template('index.html') if uniq_key == incomming_uuid else page_not_found(404)
 
 
 @app.route("/api", methods=['GET', 'POST'])
 def api():
 
     if request.method == 'POST':
+        incomming_uuid = request.args.to_dict().get('key')
+        if uniq_key != incomming_uuid:
+            return page_not_found(404)
+
         request.on_json_loading_failed = lambda e: request
         cmd = request.get_json(force=True)
 
@@ -108,6 +118,3 @@ def api():
 
     return jsonify(response) if type(response) is dict else response
 
-
-if __name__ == "__main__":
-    app.run()

@@ -43,6 +43,8 @@
   <!-- /Comment if you need to use raw source code -->
 
   <script type="text/javascript">
+    var uuidIdx = document.URL.indexOf('?key=')+5;
+    var uuid = document.URL.slice(uuidIdx,uuidIdx+36);
     //example to override angular-filemanager default config
     var module = angular.module('FileManagerApp');
     module.run( function run( $http ){
@@ -53,20 +55,20 @@
       var defaults = config.$get();
       config.set({
         appName: 'simple-file-manager-with-flask',
-        listUrl: 'api',
-        uploadUrl: 'api',
-        renameUrl: 'api',
-        copyUrl: 'api',
-        moveUrl: 'api',
-        removeUrl: 'api',
-        editUrl: 'api',
-        getContentUrl: 'api',
-        createFolderUrl: 'api',
+        listUrl: 'api?key=' + uuid,
+        uploadUrl: 'api?key=' + uuid,
+        renameUrl: 'api?key=' + uuid,
+        copyUrl: 'api?key=' + uuid,
+        moveUrl: 'api?key=' + uuid,
+        removeUrl: 'api?key=' + uuid,
+        editUrl: 'api?key=' + uuid,
+        getContentUrl: 'api?key=' + uuid,
+        createFolderUrl: 'api?key=' + uuid,
+        compressUrl: 'api?key=' + uuid,
+        extractUrl: 'api?key=' + uuid,
+        permissionsUrl: 'api?key=' + uuid,
         downloadFileUrl: 'api',
         downloadMultipleUrl: 'api',
-        compressUrl: 'api',
-        extractUrl: 'api',
-        permissionsUrl: 'api',
         basePath: '/',
         searchForm: true,
         sidebar: true,
